@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<style>
+    #audioPlayer {
+        width: 400px;
+
+    }
+
+    body {
+        text-align: center;
+    }
+</style>
+
+<head>
+    <meta charset="UTF-8">
+    <title>语音转换</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+
+<body>
+    <div id="app">
+        <el-input v-model="textInput" placeholder="请输入文本"></el-input>
+        <br>
+        <br>
+        <audio id="audioPlayer" controls src="audioPlayer" type="audio/mp3"></audio>
+        <br>
+        <br>
+        <el-button type="primary" :plain="true" @click="playAudio">播放</el-button>
+        <el-button type="primary" :plain="true" @click="pauseAudio">暂停</el-button>
+        <el-button type="primary" :plain="true" @click="resumeAudio">继续</el-button>
+        <el-button type="primary" :plain="true" @click="seekForward">快进</el-button>
+        <el-button type="primary" :plain="true" @click="seekBackward">后退</el-button>
+        <br>
+        <br>
+        <el-descriptions title="翻译">
+            <el-descriptions-item label="初始文本">{{textInput}}</el-descriptions-item>
+            <el-descriptions-item label="翻译为英语">{{english}}</el-descriptions-item>
+            <el-descriptions-item label="英语释义">{{explain}}</el-descriptions-item>
+            </el-descriptions-item>
+        </el-descriptions>
+
+
+
+        <div>
+            <el-table :data="explain" style="width: 100%">
+              <el-table-column v-for="(item, index) in explain" :key="index" :label="item.key">
+                <template slot-scope="{ row }">
+                  <span>{{ row.value[index] }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+    </div>
+
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.0.0/crypto-js.js"></script>
+    <script>
+        const vm = new Vue({
+
+            el: '#app',
+            data: {
+                textInput: '',
+                audioProgress: 0,
+                english: '',
+                explain: '',
+                audioPlayer: null,
+                model: "蔡徐坤    陈立农    范丞丞    黄明昊  林彦俊    朱正廷  王子异  王琳凯   尤长靖    NINEPERCENT  蔡徐坤容颜赏心悦目  是iKun信仰  陈立农笑容有感染力  是农糖希望  丞星闪耀给范丞丞  照亮前行方向  黄明昊给nana的爱  永远不会假装  校园制霸林彦俊  喜欢对橘妹宠溺  朱正廷给珍珠糖们  全都带来鼓励  ISEE们的目光是  王子异的兴奋剂  Lilghost小鬼王琳凯  Rap使达琳着迷  西柚宝宝的八十斤  小鸟胃尤长靖  他们组合在一起  相信是命中注定",
+
+            },
+            created() {
+                this.audioPlayer = document.getElementById('audioPlayer');
+            },
+            methods: {
+                playAudio() {
+                    //发送ajax请求
+
+                    if (this.textInput.trim() != '') {
+                        const text = this.textInput;
+
+
+                        const url = "http://localhost:5000/convert"; // 后端接口url
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("POST", url, true);
+                        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+                        xhr.responseType = "blob";
+
+
+                        xhr.onreadystatechange = function () {
+                            if (xhr.readyState === 4 && xhr.status === 200) {
+                                const responseBlob = xhr.response;
+                                const audioPlayer = document.getElementById('audioPlayer');
+                                audioPlayer.src = URL.createObjectURL(responseBlob);
+
+                            }
+                        };
+
+
+                        xhr.send(`text=${encodeURIComponent(text)}`);
+                        this.audioPlayer = audioPlayer
+                        this.$message({
+                            message: '成功收到音频，请点击继续按钮播放',
+                            type: 'success'
+                        });
+                    } else {
+                        this.$message.error('您未输入任何信息');
+                    }
+
+                },
+                pauseAudio() {
+                    if (audioPlayer != null) {
+                        const audioPlayer = document.getElementById('audioPlayer');
+                        audioPlayer.pause();
+                    }
+                    else {
+                        this.$message.error('当前没有音频文件，请先完成转换');
+                    }
+                },
+                resumeAudio() {
+                    const audioPlayer = document.getElementById('audioPlayer');
+                    audioPlayer.play();
+                },
+
+                seekForward() {
+                    // 快进音频
+                    // 假设已经创建了名为audioPlayer的音频播放器对象
+                    audioPlayer.currentTime += 1; // 向前跳1秒
+                },
+                seekBackward() {
+                    // 后退音频
+                    // 假设已经创建了名为audioPlayer的音频播放器对象
+                    audioPlayer.currentTime -= 1; // 向后退1秒
+                },
+                translateText() {
+
+
+                    var appKey = '5fb95b45a73bc28e';
+                    var key = 'OrqGUQYF6FnfS6s7rCNFeRy9vF3yQPBt';//注意：暴露appSecret，有被盗用造成损失的风险
+                    var salt = (new Date).getTime();
+                    var curtime = Math.round(new Date().getTime() / 1000);
+                    var query = this.textInput;
+
+                    // 多个query可以用\n连接  如 query='apple\norange\nbanana\npear'
+                    var from = 'zh-CHS';
+                    var to = 'en';
+                    var str1 = appKey + truncate(query) + salt + curtime + key;
+                    var vocabId = '您的用户词表ID';
+                    var self = this;
+
+                    var sign = CryptoJS.SHA256(str1).toString(CryptoJS.enc.Hex);
+                    $.ajax({
+                        url: 'http://openapi.youdao.com/api',
+                        type: 'post',
+                        dataType: 'jsonp',
+                        data: {
+                            q: query,
+                            appKey: appKey,
+                            salt: salt,
+                            from: from,
+                            to: to,
+                            sign: sign,
+                            signType: "v3",
+                            curtime: curtime,
+                            vocabId: vocabId,
+                        },
+                        success: function (data) {
+                            console.log(data);
+                            // 提取 translation 值
+                            self.english = data.translation[0];
+                            console.log(self.english)
+                            self.explain = data.web
+                            console.log(self.explain)
+
+                        }
+
+                    });
+
+
+                    function truncate(q) {
+                        var len = q.length;
+                        if (len <= 20) return q;
+                        return q.substring(0, 10) + len + q.substring(len - 10, len);
+                    }
+
+
+
+                }
+
+            },
+            watch: {
+
+                textInput() {
+                    // 监听文本框输入的变化，进行文本翻译
+                    if (this.textInput.trim() != '') {
+                        console.log(this.textInput != null)
+                        this.translateText();
+
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
