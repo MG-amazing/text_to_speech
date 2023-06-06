@@ -23,7 +23,7 @@ def convert_text_to_mp3():
 
     # 返回生成的MP3文件
     response = send_file(output_file, as_attachment=True)
-    response.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:5500'
+    response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 
